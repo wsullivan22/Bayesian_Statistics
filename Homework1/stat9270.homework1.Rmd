@@ -1,0 +1,655 @@
+---
+title: "STAT 9270 - Homework 1"
+author: "Will Sullivan"
+output: html_document
+date: "February 2, 2025"
+---
+
+```{r setup, results='hide', echo=FALSE, warning=FALSE, message=FALSE, include=TRUE}
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(gridExtra)
+library(plotly)
+library(reshape2)
+```
+
+#### 1)
+##### a)
+
+```{r}
+# The marginal probability density p(y) when sigma = 2:
+p_y <- function(y) {
+  (0.5/sqrt(8*pi))*exp(-((y-1)^2)/8) + (0.5/sqrt(8*pi))*exp(-((y-2)^2)/8)
+}
+
+# Table of input y values and output p(y) values
+y_vals <- c()
+p_vals <- c()
+for (y in seq(-7, 10, length.out = 500)) {
+  y_vals <- c(y_vals, y)
+  p_vals <- c(p_vals, p_y(y))
+}
+df_q1a <- data.frame(y = y_vals, p_y = p_vals)
+
+# Plot
+q1a_plot <- ggplot(df_q1a, aes(x = y, y = p_y)) +
+  geom_line(color = "red") +
+  labs(x = "y", y = "p(y)", title = "Marginal Probability Density p(y) for sigma = 2") +
+  theme_bw()
+
+q1a_plot
+
+ggsave(filename = "q1a_plot.pdf", plot = q1a_plot)
+```
+
+
+##### c)
+
+```{r}
+# Generic sigmoid, where x represents values of (y - theta)^2
+sigmoid <- function(x, sigma) {
+  1 / (1 + exp(-x / sigma))
+}
+
+x_vals <- seq(-50, 50, length.out = 100)
+sigma_vals <- c(0.2, 1, 5, 25)
+
+df_q1c <- do.call(rbind, lapply(sigma_vals, function(sigma) {
+  data.frame(x = x_vals, y = sigmoid(x_vals, sigma), sigma = factor(sigma))
+}))
+
+q1c_plot <- ggplot(df_q1c, aes(x = x, y = y, color = sigma)) +
+  geom_line(size = 1) +
+  labs(
+    title = "Sigmoid Function for Different Sigma Values",
+    x = "x",
+    y = "p(x)",
+    color = expression(sigma)
+  ) +
+  theme_bw()
+
+q1c_plot
+
+ggsave(filename = "q1c_plot.pdf", plot = q1c_plot)
+```
+
+#### 3)
+##### a)
+
+```{r}
+# Beta(1, 2/3) prior distribution
+beta_density <- function(x) {
+  dbeta(x, shape1 = 1, shape2 = 2/3)
+}
+
+x_vals <- seq(0, 1, length.out = 500)
+q3a_df <- data.frame(x = x_vals, density = beta_density(x_vals))
+
+q3a_plot <- ggplot(q3a_df, aes(x, density)) +
+  geom_line(color = "red") +
+  labs(title = "Beta(1,2/3) Density Function",
+       x = "x",
+       y = "Density") +
+  theme_bw()
+
+q3a_plot
+
+ggsave(filename = "q3a_plot.pdf", plot = q3a_plot)
+```
+
+
+##### b)
+
+```{r}
+# Beta(651, 350.6667) prior distribution
+beta_posterior_density <- function(x) {
+  dbeta(x, shape1 = 651, shape2 = (350+2/3))
+}
+
+x_vals <- seq(0, 1, length.out = 500)
+q3b_df <- data.frame(x = x_vals, density = beta_posterior_density(x_vals))
+
+q3b_plot <- ggplot(q3b_df, aes(x, density)) +
+  geom_line(color = "red") +
+  labs(title = "Beta(651,350.667) Density Function",
+       x = "x",
+       y = "Density") +
+  theme_bw()
+
+q3b_plot
+
+ggsave(filename = "q3b_plot.pdf", plot = q3b_plot)
+```
+
+#### 4)
+##### a)
+
+```{r}
+y <- c(43, 44, 45, 46.5, 47.5)
+
+# Grid of 1000 evenly-spaced points in the interval [0,100]
+theta_vals <- seq(0, 100, length.out = 1000)
+
+# Unnormalized posterior density evaluated for each value of theta
+evaluate_post_theta <- sapply(theta_vals, function(theta) {
+  prod(1 / (1 + (y - theta)^2))
+})
+
+q4a_df <- data.frame(theta = theta_vals, density = evaluate_post_theta)
+
+q4a_plot <- ggplot(q4a_df, aes(x = theta, y = density)) +
+  geom_line(color = "red") +
+  labs(title = "PDF of Theta",
+       x = expression(theta),
+       y = "Unnormalized Posterior Density") +
+  theme_bw()
+
+q4a_plot
+
+ggsave(filename = "q4a_plot.pdf", plot = q4a_plot)
+```
+
+##### b)
+
+```{r}
+# Normalize the posterior
+theta_probs <- evaluate_post_theta/sum(evaluate_post_theta)
+
+# Sample from the posterior
+theta_samp <- sample(theta_vals,size=1000,replace=T,prob=theta_probs)
+
+# Plot
+q4b_df <- data.frame(theta_vals, theta_probs, theta_samp)
+q4b_plot <- ggplot(q4b_df) +
+  geom_histogram(aes(x = theta_samp),bins=100,color = "black", fill = "darkgray") + 
+  geom_line(aes(x = theta_vals, y = 8000*theta_probs),lwd=1,col="red") +
+  labs(x = expression(theta), title = "Posterior Samples of Theta") +
+  theme_bw()
+
+q4b_plot
+
+ggsave(filename = "q4b_plot.pdf", plot = q4b_plot)
+```
+
+##### c)
+
+```{r}
+# Sample from Cauchy distribution for each sample of theta
+y6_samp <- sapply(theta_samp, function(theta) {
+  rcauchy(1, location = theta, scale = 1)
+})
+
+# Plot
+q4c_df <- data.frame(y6_samp)
+q4c_plot <- ggplot(q4c_df, aes(x = y6_samp)) +
+  geom_histogram(bins = 100, color = "black", fill = "lightgray") +
+  labs(title = "Predictive Distribution of y6", x = "y6", y = "Frequency") +
+  theme_bw()
+
+q4c_plot
+
+ggsave(filename = "q4c_plot.pdf", plot = q4c_plot)
+```
+
+#### 6)
+##### a)
+
+```{r}
+## Code adapted from lecture notes
+# Load in the data
+data <- read.table("planes.txt",header=T)
+data
+
+y <- data[,2]
+t <- data[,1]-1976
+n <- length(y)
+
+plot.frame <- data.frame(y,t)
+p <- ggplot(data = plot.frame, aes(x = t, y = y)) +
+  geom_point(size=2,col="black") +
+  labs(x = "Year = 1976 + x", y = "Number of Fatal Accidents", title = NULL) +
+  theme_bw()
+p
+```
+
+```{r}
+## Code adapted from lecture notes
+# Compute the log-posterior (code provided to us in lecture notes)
+posteriorplanes <- function(alpha,beta){
+  logpost <- -Inf
+  if (alpha + beta*max(t) > 0){
+    logpost <- 0
+    for (i in 1:n){
+      logpost <- logpost + y[i]*log(alpha+beta*t[i])
+      logpost <- logpost - (alpha+beta*t[i])
+    }
+  }
+  logpost
+}
+```
+
+```{r}
+## Code adapted from lecture notes
+#### setting up 2D grid for alpha and beta
+#### will do calculations with joint matrix but long version needed for ggplot
+
+numgrid <- 100
+joint.matrix <- matrix(NA,nrow=numgrid,ncol=numgrid)
+
+#### choosing specific ranges of alpha and beta
+
+alpharange <- ppoints(numgrid)*25+15   # alpha between 15 and 40
+betarange <- ppoints(numgrid)*6-4  # beta between -4 and 2
+
+#### evaluating joint posterior over 2D grid of alpha and beta
+
+for (i in 1:numgrid){
+  for (j in 1:numgrid){
+    joint.matrix[i,j] <- posteriorplanes(alpharange[i],betarange[j])
+  }
+}
+joint.matrix <- exp(joint.matrix - max(joint.matrix))
+joint.matrix <- joint.matrix/sum(joint.matrix)
+
+joint.long <- melt(joint.matrix)
+plot.frame <- data.frame(alphagrid = alpharange[joint.long[,1]], 
+                         betagrid = betarange[joint.long[,2]], 
+                         joint = joint.long[,3])
+p <- ggplot(data = plot.frame, aes(x = alphagrid, y = betagrid, z = joint)) + 
+  geom_contour() + 
+  scale_x_continuous(limits = c(min(alpharange), max(alpharange))) + 
+  scale_y_continuous(limits = c(min(betarange), max(betarange))) +
+  labs(x = "Grid of alpha values", y = "Grid of beta values", title = "Joint Posterior") +
+  theme_bw()
+p
+```
+
+
+```{r}
+## Code adapted from lecture notes
+#### calculating marginal and conditional probabilities for grid sampling: 
+
+alphamarginal <- rep(NA,numgrid)
+for (i in 1:numgrid){
+  alphamarginal[i] <- sum(joint.matrix[i,])
+}
+betaconditional <- matrix(NA,nrow=numgrid,ncol=numgrid)
+for (i in 1:numgrid){
+  for (j in 1:numgrid){
+    betaconditional[i,j] <- joint.matrix[i,j]/sum(joint.matrix[i,])
+  }
+}
+
+#### plotting marginal posterior of alpha
+
+plot.frame <- data.frame(alpharange, alphamarginal)
+p <- ggplot(plot.frame,aes(x = alpharange, y = alphamarginal)) + 
+  geom_line(lwd=1) + 
+  labs(x = "alpha", title = "Marginal Posterior of alpha") +
+  theme_bw()
+p
+```
+
+```{r}
+## Code adapted from lecture notes
+#### plotting conditional posterior of beta for particular values of alpha
+
+alpharange[25]
+alpharange[50]
+alpharange[75]
+
+plot.frame <- data.frame(betarange,cond1=betaconditional[25,],cond2=betaconditional[50,],cond3=betaconditional[75,])
+plot_list <- vector("list", length = 3)
+##
+p <- ggplot(plot.frame,aes(x = alpharange, y = cond1)) +
+  geom_line(lwd=1) + 
+  labs(x = "alpha", title = "Posterior of beta conditional on alpha = 21") +
+  theme_bw()
+plot_list[[1]] <- p
+##
+p <- ggplot(plot.frame,aes(x = alpharange, y = cond2)) +
+  geom_line(lwd=1) + 
+  labs(x = "alpha", title = "Posterior of beta conditional on alpha = 27") +
+  theme_bw()
+plot_list[[2]] <- p
+##
+p <- ggplot(plot.frame,aes(x = alpharange, y = cond3)) + 
+  geom_line(lwd=1) + 
+  labs(x = "alpha", title = "Posterior of beta conditional on alpha = 34") +
+  theme_bw()
+plot_list[[3]] <- p
+##
+grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],top=NULL,nrow=3,ncol=1)
+```
+
+
+```{r}
+## Code adapted from lecture notes
+#### sampling values of alpha and beta from 2D grid
+alpha.samp <- rep(NA,1000)
+beta.samp <- rep(NA,1000)
+for (m in 1:1000){
+  a <- sample(1:100,size=1,replace=T,prob=alphamarginal)
+  b <- sample(1:100,size=1,replace=T,prob=betaconditional[a,])
+  alpha.samp[m] <- alpharange[a]
+  beta.samp[m] <- betarange[b]
+}
+
+plot.frame.1 <- data.frame(alphagrid = alpharange[joint.long[,1]],betagrid = betarange[joint.long[,2]], joint = joint.long[,3])
+plot.frame.2 <- data.frame(alpha.samp,beta.samp)
+q6a_plot <- ggplot() + 
+  geom_point(data = plot.frame.2, aes(x = alpha.samp, y = beta.samp)) +
+  geom_contour(data = plot.frame.1,aes(x = alphagrid, y = betagrid, z = joint),col="red") + 
+  labs(x = "Grid of alpha values", y = "Grid of beta values", title = "Samples from Joint Posterior") +
+  theme_bw()
+
+q6a_plot
+
+ggsave(filename = "q6a_plot.pdf", plot = q6a_plot)
+```
+
+
+
+```{r}
+## Code adapted from lecture notes
+#### predict the number of accidents for the next year (1986) after data  (t = 10):
+
+# Generate 1000 samples from the posterior predictive distribution for y*
+pred.rate <- alpha.samp + beta.samp*10
+pred.accidents <- rep(NA,1000)
+for (i in 1:1000){
+  pred.accidents[i] <- rpois(1,pred.rate[i])
+}
+
+# Plot histogram
+q6b_plot <- ggplot(data = data.frame(pred.accidents), aes(x = pred.accidents)) + 
+  geom_histogram(bins=20,color = "black", fill = "darkgray") + 
+  labs(x = "alpha", title = "Predicted Number of Accidents in 1986") +
+  theme_bw()
+
+# Calculate 95% posterior predictive interval for the number of fatal accidents in 1986 and plot the endpoints of the interval on the histogram
+low <- sort(pred.accidents)[25]
+high <- sort(pred.accidents)[975]
+low
+high
+
+q6b_plot <- q6b_plot + 
+  geom_vline(xintercept = low, col="red") +
+  geom_vline(xintercept = high, col="red")
+
+q6b_plot
+
+ggsave(filename = "q6b_plot.pdf", plot = q6b_plot)
+```
+
+#### 7)
+##### a)
+
+```{r}
+set.seed(42)
+
+simulation <- function() {
+  arrival_times <- c()
+  current_time <- 0
+  
+  # Simulate patient arrivals for 420 minutes
+  while (current_time <= 420) {
+    inter_arrival_time <- rexp(1, rate = 1 / 10)
+    current_time <- current_time + inter_arrival_time
+    if (current_time <= 420) {
+      arrival_times <- c(arrival_times, current_time)
+    }
+  }
+  
+  num_patients_seen <- length(arrival_times)
+  visit_durations <- runif(num_patients_seen, min = 5, max = 20)
+  time_docs_available <- c(0, 0, 0)
+  wait_times <- rep(0, num_patients_seen)
+  
+  # Simulate patient visits
+  for (i in 1:num_patients_seen) {
+    first_available_doc <- which.min(time_docs_available)
+    if (time_docs_available[first_available_doc] > arrival_times[i]) {
+      wait_times[i] <- time_docs_available[first_available_doc] - arrival_times[i]
+    }
+    time_docs_available[first_available_doc] <- max(time_docs_available[first_available_doc], arrival_times[i]) + visit_durations[i]
+  }
+  
+  # Collect results
+  num_patients_waited <- sum(wait_times > 0)
+  average_wait_time <- ifelse(num_patients_waited > 0, mean(wait_times[wait_times > 0]), 0)
+  office_closing_time <- max(time_docs_available)
+  
+  # Return results
+  results <- list(
+    num_patients_seen = num_patients_seen,
+    num_patients_waited = num_patients_waited,
+    average_wait_time = average_wait_time,
+    office_closing_time = office_closing_time
+  )
+  return(results)
+}
+```
+
+```{r}
+# Function to make closing times human readable
+make_time_human_readable <- function(closing_time) {
+  closing_time_hour <- 9 + closing_time %/% 60 - 12
+  closing_time_mins <- ceiling((9 + closing_time / 60 - 12 - closing_time_hour) * 60)
+  closing_time_mins <- sprintf("%02d", closing_time_mins)
+  
+  if (closing_time_mins == 60) {
+    closing_time_hour <- closing_time_hour + 1
+    closing_time_mins <- "00"
+  }
+  
+  closing_time_human_readable <- paste0(closing_time_hour, ":", closing_time_mins, "pm")
+  
+  return(closing_time_human_readable)
+}
+```
+
+
+```{r}
+# Function to run multiple simulations
+run_simulations <- function(num_simulations) {
+  simulation_results <- replicate(num_simulations, simulation(), simplify = F)
+  
+  if (num_simulations > 1) {
+    
+    closing_times <- sapply(simulation_results, function(x) x$office_closing_time)
+    num_patients_seen <- sapply(simulation_results, function(x) x$num_patients_seen)
+    num_patients_waited <- sapply(simulation_results, function(x) x$num_patients_waited)
+    average_wait_time <- sapply(simulation_results, function(x) x$average_wait_time)
+    
+    # Determine median and interval for closing times and make them human readable
+    median_closing_time <- median(closing_times)
+    median_closing_time <- make_time_human_readable(median_closing_time)
+    
+    closing_time_interval_low <- quantile(closing_times, 0.025)
+    closing_time_interval_low <- make_time_human_readable(closing_time_interval_low)
+    
+    closing_time_interval_high <- quantile(closing_times, 0.975)
+    closing_time_interval_high <- make_time_human_readable(closing_time_interval_high)
+    
+    # Print answer
+    cat(
+      paste0(
+        "Median number of patients who came to the office: ", median(num_patients_seen), "\n",
+        paste0("95% CI for number of patients who came to the office: [", paste(quantile(num_patients_seen, c(0.025, 0.975)), collapse = ", "), "]\n"),
+        "Median number of patients who had to wait for a doctor: ", median(num_patients_waited), "\n",
+        paste0("95% CI for number of patients who had to wait for a doctor: [", paste(quantile(num_patients_waited, c(0.025, 0.975)), collapse = ", "), "]\n"),
+        
+        "Median average wait time: ", median(average_wait_time), "\n",
+        paste0("95% CI for average wait time: [", paste(quantile(average_wait_time, c(0.025, 0.975)), collapse = ", "), "]\n"),
+        
+        "Median closing time: ", median_closing_time, "\n",
+        "95% CI for closing time: [", closing_time_interval_low, ", ", closing_time_interval_high, "]"
+      )
+    )
+    
+  } else {
+    
+    simulation_results <- simulation_results[[1]]
+    
+    # Print answer
+    cat(
+      paste0(
+        "Number of patients who came to the office: ", simulation_results$num_patients_seen, "\n",
+        "Number of patients who had to wait for a doctor: ", simulation_results$num_patients_waited, "\n",
+        "Average wait time: ", simulation_results$average_wait_time, "\n",
+        "Closing time: ", make_time_human_readable(simulation_results$office_closing_time)
+      )
+    )
+    
+  }
+}
+```
+
+```{r}
+# Run a single simulation
+run_simulations(1)
+```
+
+
+##### b)
+
+```{r}
+# Run 100 simulations
+run_simulations(100)
+```
+
+#### 8)
+##### a)
+
+```{r}
+# Simulate a single inning, inputting the number of allowable outs as a parameter to the function
+inning_simulation <- function(outs_allowed) {
+  outs <- 0
+  hits <- c()
+  outcomes <- c("out", "single", "double", "homerun")
+  outcome_probs <- c(out = 0.65, single = 0.2, double = 0.1, homerun = 0.05)
+  
+  # Simulate at-bats until three outs are reached
+  while (outs < outs_allowed) {
+    at_bat <- sample(outcomes, size = 1, prob = outcome_probs)
+    if (at_bat == "out") {
+      outs <- outs + 1
+    } else {
+      hits <- c(hits, at_bat)
+    }
+  }
+  
+  runs <- 0
+  runners <- c(0, 0, 0)
+  
+  for (hit in hits) {
+    if (hit == "single") {
+      runners[runners > 0] <- runners[runners > 0] + 1
+      
+      for (i in 1:length(runners)) {
+        if (runners[i] > 3) {
+          runs <- runs + 1
+          runners[i] <- 0
+        }
+      }
+      
+      runner_idx <- which(runners == 0)[1]
+      runners[runner_idx] <- 1
+      
+      
+    } else if (hit == "double") {
+      runners[runners > 0] <- runners[runners > 0] + 2
+      
+      for (i in 1:length(runners)) {
+        if (runners[i] > 3) {
+          runs <- runs + 1
+          runners[i] <- 0
+        }
+      }
+      
+      runner_idx <- which(runners == 0)[1]
+      runners[runner_idx] <- 2
+      
+      
+    } else {
+      num_on_base <- sum(runners > 0)
+      runs <- runs + num_on_base + 1
+      runners <- c(0, 0, 0)
+    }
+  }
+  
+  return(runs)
+}
+```
+
+
+```{r}
+# Run 1000 inning simulations with 3 outs allowed
+simulation_results <- replicate(1000, inning_simulation(3), simplify = TRUE)
+
+q8a_df <- data.frame(runs = simulation_results)
+
+q8a_plot <- ggplot(q8a_df, aes(x = simulation_results)) +
+  geom_histogram(bins = 8,
+                 color = "black",
+                 fill = "darkgray") +
+  labs(x = "Runs Scored", y = "Count", title = "Histogram of Runs Scored Per 3 Out Inning") +
+  scale_x_continuous(breaks = seq(0, 10, by = 1)) +
+  theme_bw()
+
+# Calculate 95% posterior predictive interval for the number of fatal accidents in 1986 and plot the endpoints of the interval on the histogram
+low <- sort(simulation_results)[25]
+high <- sort(simulation_results)[975]
+low
+high
+
+q8a_plot <- q8a_plot +
+  geom_vline(xintercept = low, col = "red") +
+  geom_vline(xintercept = high, col = "red")
+
+q8a_plot
+
+ggsave(filename = "q8a_plot.pdf", plot = q8a_plot)
+```
+
+##### b)
+
+```{r}
+# Run 1000 inning simulations with 6 outs allowed
+simulation_results <- replicate(1000, inning_simulation(6), simplify = TRUE)
+
+q8b_df <- data.frame(runs = simulation_results)
+
+q8b_plot <- ggplot(q8b_df, aes(x = simulation_results)) +
+  geom_histogram(bins = 10,
+                 color = "black",
+                 fill = "darkgray") +
+  labs(x = "Runs Scored", y = "Count", title = "Histogram of Runs Scored Per 6 Out Inning") +
+  scale_x_continuous(breaks = seq(0, 15, by = 1)) +
+  theme_bw()
+
+# Calculate 95% posterior predictive interval for the number of fatal accidents in 1986 and plot the endpoints of the interval on the histogram
+low <- sort(simulation_results)[25]
+high <- sort(simulation_results)[975]
+low
+high
+
+q8b_plot <- q8b_plot +
+  geom_vline(xintercept = low, col = "red") +
+  geom_vline(xintercept = high, col = "red")
+
+q8b_plot
+
+ggsave(filename = "q8b_plot.pdf", plot = q8b_plot)
+```
+
+
+
+
+```{r}
+sessionInfo()
+```
+
+
