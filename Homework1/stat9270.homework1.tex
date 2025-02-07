@@ -97,17 +97,16 @@ p(\theta = 1 \, | \, y = 1) &= \frac{1}{1 + \exp\left( -\frac{1}{8} \right)} \\
 
 (c) Describe how the posterior density of $\theta$ changes in shape as $\sigma$ is increased and as it is decreased.
 
-The posterior distribution takes the form of a sigmoid function proportional to: $\frac{1}{1 + \exp\left( -\frac{(y - \theta)^2}{\sigma} \right)}$.
-This means that the value of $\sigma$ determines the steepness of the sigmoid function.  As $\sigma$
-increases, the exponential term in the denominator, $\exp\left(-\frac{(y-\theta)^2}{\sigma}\right)$, becomes smaller for any given
-value of $(y - \theta)^2$. This causes the denominator to increase more gradually, resulting in a more gradual transition of the sigmoid function from 0 to 1.
+The posterior distribution takes the form of a sigmoid-like function. This means that the value of $\sigma$ determines
+the steepness of the function. As $\sigma$ increases, the exponential term increases more gradually, resulting in a more
+gradual transition of the function from 0 to 1.
 
 
-Conversely, as $\sigma$ decreases, the exponential term grows larger for any given value of $(y - \theta)^2$, which leads to a more rapid increase in the sigmoid function from 0 to 1.
+Conversely, as $\sigma$ decreases, the exponential term grows larger for any given numerator value, which leads to a more
+rapid increase in the function from 0 to 1.
 
-
-By this logic, $\sigma$ acts as a measure of the uncertainty in the posterior distribution of $\theta$, with larger values of $\sigma$ corresponding to greater uncertainty and
-more gradual changes in the posterior density of $\theta$.
+By this logic, $\sigma$ acts as a measure of the uncertainty in the posterior distribution of $\theta$, with larger values
+of $\sigma$ corresponding to greater uncertainty and more gradual changes in the posterior density of $\theta$.
 
 This is demonstrated below:
 
